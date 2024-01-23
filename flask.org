@@ -1,0 +1,108 @@
+#+TITLE: Flask
+#+AUTHOR: mklno
+
+* Flask
+- All flask applications must create an application instance.
+- The web server passes all the requests from the clients to this object for handling, using a protocol called /Web Server Gateway Interface/.
+- The application instance is an object of class Flask. It takes the name of the main module or package of the application as the argument. 
+#+BEGIN_SRC python
+  from flask import Flask
+  app = Flask(__name__)
+#+END_SRC    
+* Route and View functions
+- The association between a URL and the function that handles it is called a /route/.
+#+BEGIN_SRC python
+  @app.route('/')
+  def index():
+      return '<h1>Hello, World!</h1>'
+#+END_SRC  
+- The return value of the function is called the /response/.
+- The function index() is called a /view function/.
+- Dynamic component in flask
+#+BEGIN_SRC python
+  @app.route('user/<name>')
+  def user(name):
+      return '<h1>Hello, %s!</h1>' % name
+#+END_SRC    
+- Dynamic component in routes are strings by default but can also be defined with a type. Example: '/user/<int:id>' - would match only URLs that have an integer in the id dynamic segment.
+- Flask supports int, float, and path for routes. The path type alse represents a string but does not consider slashes as separators and instead considers them part of the dynamic component.
+* The Request-Response Cycle
+- When Flask receives a request from a client, it needs to make a few objects available to the view function that will handle it. A good example is a request object.
+- The obvious way in which Flask could give a view function access to the request object is by sending it as an argument, but that would require every single view function in the application to have an extra argument. Things get more complicated if you consider that the request object is not the only object that the view functions might need to access to fulfill a request.
+- Flask uses /contexts/ to temporarity make certain objects globally accessible to avoid cluttering view functions with a bunch of arguments.
+#+BEGIN_SRC python
+from flask import Flask, request
+
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+	return '<p>%s</p>' %request.headers
+
+if __name__ == '__main__':
+	app.run(debug=True)
+#+END_SRC
+- Note how in the above view function request is used as if it was a global variable.
+- In reality, request cannot be global variable if you consider that in a multithreaded server the threads are working on different requests from different clients at the same time, so each thread need to see a different object in request.
+- Contexts enables Flask to make certain variables gloablly accessible to a thread without interfering with the other threads.   
+- A thread is the smallest sequence of instructions that can be managed independently. It is common for a process to have multiple active threads, sometimes sharing resources such as memory or file handles. Mutlithreaded web servers start a pool of threads and select a thread from the pool to handle each incoming request.
+- There are two types of context in Flask: application context and the request context.
+|---------------+---------+------------------------------------------------------|
+| Variable Name | Context | Description                                          |
+|---------------+---------+------------------------------------------------------|
+| current app   | App Con | The application instance for the active application  |
+| g             | App Con | An object used as temp storage for each request      |
+| request       | Req Con | Contents of a HTTP request sent by the client as obj |
+| session       | Req Con | Dict, used to store values used between requests     |
+* Request Dispatching
+- When the application receives a request from the client, it needs to know which view function to be invoked. 
+- Flask looks up the URL given in the request in the application's URL map, which contains a mapping of URLs to the view function that handle them.
+#+BEGIN_SRC python
+>>> app.url_map
+Map([<Rule '/static/<filename>' (GET, HEAD, OPTIONS) -> static>,
+ <Rule '/' (GET, HEAD, OPTIONS) -> index>,
+ <Rule '/user/<name>' (GET, HEAD, OPTIONS) -> user>,
+ <Rule '/user/<userId>' (GET, HEAD, OPTIONS) -> userId>])
+#+END_SRC
+- Head, Options and Get are the request methods that are handled by the route.
+* Request Hooks
+- Sometimes it is useful to execute code before or after each request is processed, eg: connection to database.
+- Instead of duplicating the code in every view function, flask offers an option to register common functions to be invoke before or after a request is dispatched to a view function.  
+- Request hooks are implements as decorators.
+|----------------------+--------------------------------------------------------------------------------------|
+| Request Hooks        | Used                                                                                 |
+|----------------------+--------------------------------------------------------------------------------------|
+| before first request | Register a function to run before the first req is handled                           |
+| before request       | Register a function to run before each request                                       |
+| after request        | Register a function to run after each request, if no unhandled exceptions occurred   |
+| teardown request     | Register a function to run after each request, even if unhandled exceptions occurred |
+|----------------------+--------------------------------------------------------------------------------------|
+* Responses
+- When Flask invokes a view function, it expects its return values to be the response of the request. In most cases, its just a string.
+- The HTTP protocol requires more than a string as a response to the request such as a status code.
+- By default, 200 is the sent by Flask. To add something else pass it as a second return value after the response text.
+#+BEGIN_SRC python
+  @app.route('/')
+  def index():
+      return '<h1>Bad request</h1>', 400
+#+END_SRC
+- It can also take a third argument, a dictionary of headers that are added to the HTTP response.
+- Instead of returning one, two, or three values as a tupe, Flask view functions have the option of returning a Response object.
+- The /make_response()/ function takes one, two, or three arguments and returns as a Response object.
+#+BEGIN_SRC python
+  from flask import make_response
+
+  @app.route('/')
+  def index():
+      response = make_response('<h1>This document carries a cookie!</h1>')
+      response.set_cookie('answer', '42')
+      return response
+#+END_SRC      
+- There is another special type of response called a redirect for redirecting.
+#+BEGIN_SRC python
+  @app.route('/')
+  def index():
+      return redirect('https://thekafkaa.online')
+#+END_SRC  
+
+
