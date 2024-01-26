@@ -88,7 +88,7 @@ Map([<Rule '/static/<filename>' (GET, HEAD, OPTIONS) -> static>,
 #+END_SRC
 - It can also take a third argument, a dictionary of headers that are added to the HTTP response.
 - Instead of returning one, two, or three values as a tupe, Flask view functions have the option of returning a Response object.
-- The /make_response()/ function takes one, two, or three arguments and returns as a Response object.
+- The /make response()/ function takes one, two, or three arguments and returns as a Response object.
 #+BEGIN_SRC python
   from flask import make_response
 
@@ -104,5 +104,134 @@ Map([<Rule '/static/<filename>' (GET, HEAD, OPTIONS) -> static>,
   def index():
       return redirect('https://thekafkaa.online')
 #+END_SRC  
+* Templates
+- A template is a file that contains the text of a response, with placeholder variables for the dynamic parts that will be known only in the context of a request. The process that replaces the variables with actual vaues and returns a final response string is called rendering.
+- Flask used Jinja2 for rendering.
+#+BEGIN_SRC python
+  from flask import Flask, render_template
+  app = Flask(__name__)
 
+  @app.route('/')
+  def index():
+      return render_template('index.html') // templates/index.html
 
+  @add.route('/user/<name>')
+  def user(name):
+      return render_templete('user.html', name = name)
+#+END_SRC    
+- Jinja2 recognizes variables of any type, even comples types such as lists, dictionaries and objects.
+#+BEGIN_SRC html
+  <p>A value from a dictionary: {{ mydict['key'] }}.</p>
+  <p>A value from a list: {{ mylist[3] }}.</p>
+  <p>A value from a list with a variable index: {{ mylist[myintvar] }}.</p>
+  <p>A value from an object's method: {{ myobj.somemethod() }}.</p>
+#+END_SRC
+- Variable can be modified with filters which are added after the variable name with a pipe as separator.
+#+BEGIN_SRC html
+<p>Hello, {{ name|capitalize }}.</p>
+#+END_SRC  
+- Jinja also offers control stuructures. Following is how conditionals are done.
+#+BEGIN_SRC html
+  {% if user %}
+      Hello, {{ user }}!
+  {% else %}
+      Hello, Stranger!
+  {% endif %}
+#+END_SRC
+- Following is a demonstrations of a for loop
+#+BEGIN_SRC html
+  <ul>
+    {% for comment in comments %}
+	<li>{{ comment }}</li>
+    {% endfor %}
+  </ul>
+#+END_SRC  
+- Jinja also supports macros, which are similar to python code.
+#+BEGIN_SRC html
+  {% macros render_comment(comment) %}
+      <li>{{ comment }}</li>
+  {% endmacros %}
+
+  <ul>
+    {% for comment in comments %}
+	{{ render_comment(comment) }}
+    {% endfor %}
+  </ul>  
+#+END_SRC  
+- To make macros more reusable, they can be stored in a standalone files that are then imported from all the templates that need them.
+#+BEGIN_SRC html
+  {% import 'macros.html' as macros %}
+
+  <ul>
+    {% for comment in comments %}
+	{{ macros.render_comment(comment) }}
+    {% endfor %}
+  </ul>
+#+END_SRC  
+- Portions of template code that need to be repeated in several places can be stored in a separate file and included from all the templates to avoid repitition.
+#+BEGIN_SRC html
+{% include 'common.html' %}
+#+END_SRC  
+- Jinja also provides template inheritance for powerful reuse, first a base template is created with the name base.html.
+#+BEGIN_SRC html
+  <html>
+    <head>
+      {% block head %}
+      <title>{% block title %}{% endblock %} - My application</title>
+      {% endblock %}
+    </head>
+    <body>
+      {% block body %}
+      {% endblock %}
+    </body>
+  </html>
+#+END_SRC  
+#+BEGIN_SRC html
+  {% extends "base.html" %}
+  {% block title %}Index{% endblock %}
+  {% block head %}
+      {{ super() }}
+  {% endblock %}
+  {% blockbody %}
+  <h1>Hello, World!</h1>
+  {% endblock %}
+#+END_SRC
+* Links
+- Any application that has more than one route will invariably need to include links that connect the differnet pages, such as in a navigation bar.
+- Writing the URLs as links directly in the template is trivial for simple routes, but for dynamic routes with variable portions it can get more complicated to build the URLs right in the template.
+- To avoid these problem, Flask provies the urlfor() helper function, which generates URLs from the informatioon stored in the application's URL map.
+#+BEGIN_SRC python
+  @app.route('/user/<name>')
+  def user():
+      print(url_for('user', name=name)
+#+END_SRC
+- Using static file for a file url.
+#+BEGIN_SRC html
+{% block head %}
+{{ super() }}
+<link rel="shortcut icon" href="{{ url_for('static', filename = 'favicon.ico') }}"
+ type="image/x-icon">
+<link rel="icon" href="{{ url_for('static', filename = 'favicon.ico') }}"
+ type="image/x-icon">
+{% endblock %}
+#+END_SRC
+* Web Forms
+- Though forms in Flask can be handled with the help of request object, it becomes tedious and repetitive to generate HTML code for forms and the validations of the submitted form data. Hence Flask-WTF extension is used.
+- Cross Site Request Forgery attack occurs when a malicious website sends requests to a different website on which the victim is logged in. By default, Flask WTF protects forms agains CSRF.
+- To implement CSRF, WTF needs the application to configure an encrytion key. Flask then uses this key to generate encrypted tokens that are used to verify the authenticity of requests with form data.
+#+BEGIN_SRC python
+  app = Flask(__name__)
+  app.config['SECRET_KEY'] = 'hard to guess string'
+#+END_SRC      
+- app.config dictionary is a general purpose place to store configuration variables used by the framework, extensions or the applicaiton itself.
+- When using Flask-WTF, each form is representd by a class that inherits from class Form.
+#+BEGIN_SRC python
+  from flask_wtf import Form
+  from wtforms import StringField, SubmitField
+  from wtforms.validators import Required
+
+  class GetNameForm(Form):
+      name = StringField('What is your name?', validators=[Required()])
+      submit = SubmitField('Submit')
+#+END_SRC  
+  

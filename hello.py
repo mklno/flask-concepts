@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, url_for
 
 app = Flask(__name__)
 
@@ -12,6 +12,7 @@ def user(name):
 
 @app.route('/user/<int:userId>')
 def userId(userId):
+	print(url_for('userId', userId=userId))
 	return '<h1>Here is your user id %d.</h1>' %userId
 
 
