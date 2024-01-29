@@ -234,4 +234,3 @@ Map([<Rule '/static/<filename>' (GET, HEAD, OPTIONS) -> static>,
       name = StringField('What is your name?', validators=[Required()])
       submit = SubmitField('Submit')
 #+END_SRC  
-  
