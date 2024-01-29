@@ -6,6 +6,11 @@
     <title>Form</title>
   </head>
   <body>
+    {% for message in get_flashed_messages() %}
+    <div class="alert alert-warning">
+      {{ message }}
+    {% endfor %}
+    </div>
     <h1>Hello, {% if name %}{{ name }}{% else %}Stranger!{% endif %}</h1>
     {% import "bootstrap/wtf.html" as wtf %} {{ wtf.quick_form(form) }}
   </body>
